@@ -7,7 +7,7 @@
 # Notmuchfs is free software, released under the GNU General Public
 # License version 3 (or later).
 #
-# Copyright © 2012 Tim Stoakes
+# Copyright © 2012,2025 Tim Stoakes
 ################################################################################
 
 . "include" || exit 1
@@ -45,18 +45,18 @@ test -d "$TEST_ROOT/mount/$QUERY/tmp" || die "dir exists 4"
 #
 # Use message IDs here instead of files to avoid being tripped up by multiple
 # files with the same message ID.
-cat "$TEST_ROOT/mount/$QUERY/cur/"* | formail -d -xMessage-id: -s | tr -d "<>" | sort > out1
+for F in "$TEST_ROOT/mount/$QUERY/cur/"*; do cat "$F" | formail -d -xMessage-id: -s; done | tr -d "<>[:blank:]" | sed '/^$/d' | sort > out1
 notmuch search --output=messages "$QUERY" | sed s/id:/\ / | sort > out2
 wc -l out1
 wc -l out2
-diff out1 out2 || die "diff"
+diff -w out1 out2 || die "diff"
 rm -f out1 out2
 
 
 SAVEIFS=$IFS
 IFS=$(echo -en "\n\b")
 for FILE in `ls -1 "$TEST_ROOT/mount/$QUERY/cur/"*`; do
-  ID=`cat "$FILE" | formail -d -xMessage-id: -s | tr -d "<> "`
+  ID=`cat "$FILE" | formail -d -xMessage-id: -s | tr -d "<>[:blank:]" | sed '/^$/d'`
   # Check that notmuch tags match X-Label: tags.
   TAGS=`notmuch search --output=tags "id:$ID" | tr "\\n" "," |sed s/,\$//`
   XLABEL=`head -n 1 "$FILE" | sed s/X-Label:\ // | sed -e "s/\s\+$//" | tr -d "\\r\\n"`
@@ -68,7 +68,7 @@ for FILE in `ls -1 "$TEST_ROOT/mount/$QUERY/cur/"*`; do
   notmuch show --format=raw "id:$ID" > out2
   wc -l out1
   wc -l out2
-  diff out1 out2 || die "non-tag file content does not match"
+  diff -w out1 out2 || die "non-tag file content does not match"
   rm -f out1 out2
 done
 IFS=$SAVEIFS
