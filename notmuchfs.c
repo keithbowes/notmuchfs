@@ -2,7 +2,7 @@
 /*
  * notmuchfs - A virtual maildir file system for notmuch queries
  *
- * Copyright © 2012-2017 Tim Stoakes
+ * Copyright © 2012-2025 Tim Stoakes
  *
  * This file is part of notmuchfs.
  *
@@ -67,7 +67,7 @@
 
 /*============================================================================*/
 
-#define NOTMUCHFS_VERSION "0.4"
+#define NOTMUCHFS_VERSION "0.5"
 
 /*============================================================================*/
 
@@ -212,11 +212,14 @@ static void database_open (notmuch_context_t *p_ctx, bool need_write)
 
  while (TRUE) {
    notmuch_status_t status =
-     notmuch_database_open(global_config.mail_dir,
-                           need_write ?
-                             NOTMUCH_DATABASE_MODE_READ_WRITE:
-                             NOTMUCH_DATABASE_MODE_READ_ONLY,
-                           &p_ctx->db);
+     notmuch_database_open_with_config(global_config.mail_dir,
+                                       need_write ?
+                                         NOTMUCH_DATABASE_MODE_READ_WRITE:
+                                         NOTMUCH_DATABASE_MODE_READ_ONLY,
+                                       NULL,
+                                       NULL,
+                                       &p_ctx->db,
+                                       NULL);
 
    if (status == NOTMUCH_STATUS_SUCCESS) {
      break;
