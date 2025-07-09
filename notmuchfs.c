@@ -60,10 +60,14 @@
 #include <sys/param.h>
 #include <string.h>
 
-#define FUSE_USE_VERSION 26
+#define FUSE_USE_VERSION 30
 #include <fuse.h>
 
 #include "notmuch.h"
+
+#ifndef UNUSED
+#define UNUSED(x) (void)(x)
+#endif
 
 /*============================================================================*/
 
@@ -265,9 +269,10 @@ static void database_close (notmuch_context_t *p_ctx)
 /** The maximum length of the tag exclusion string. Arbitrarily chosen. */
 #define EXCLUDED_TAGS_MAX_LENGTH 128
 
-static void *notmuchfs_init (struct fuse_conn_info *conn)
+static void *notmuchfs_init (struct fuse_conn_info *conn, struct fuse_config *cfg)
 {
  (void)conn;
+ UNUSED(cfg);
 
  int res = chdir(global_config.backing_dir);
  if (res == -1)
@@ -315,8 +320,9 @@ static void notmuchfs_destroy (void *p_ctx_in)
 
 /*============================================================================*/
 
-static int notmuchfs_getattr (const char *path, struct stat *stbuf)
+static int notmuchfs_getattr (const char *path, struct stat *stbuf, struct fuse_file_info *fi)
 {
+ UNUSED(fi);
  int res = 0;
 
  memset(stbuf, 0, sizeof(struct stat));
@@ -611,7 +617,7 @@ static int fill_dir_with_message (opendir_t         *dir_fd,
      stbuf.st_size += MAX_XLABEL_LENGTH;
      LOG_TRACE("readdir filling dir %s at %ld\n",
                trans_name, dir_fd->next_offset);
-     if (filler(buf, trans_name, &stbuf, dir_fd->next_offset++) != 0) {
+     if (filler(buf, trans_name, &stbuf, dir_fd->next_offset++, 0) != 0) {
        LOG_TRACE("readdir filler full \"%s\".\n", trans_name);
        dir_fd->next_offset--;
        res = INT_MAX;
@@ -642,9 +648,11 @@ static int notmuchfs_readdir (const char            *path,
                               void                  *buf,
                               fuse_fill_dir_t        filler,
                               off_t                  offset_in,
-                              struct fuse_file_info *fi)
+                              struct fuse_file_info *fi,
+                              enum fuse_readdir_flags flags)
 {
  (void)path;
+ UNUSED(flags);
  int res = 0;
 
  opendir_t *dir_fd = (opendir_t *)(uintptr_t)fi->fh;
@@ -653,8 +661,8 @@ static int notmuchfs_readdir (const char            *path,
    case OPENDIR_TYPE_NOTMUCH_QUERY:
      {
       if (offset_in == 0) {
-        filler(buf, ".", NULL, dir_fd->next_offset++);
-        filler(buf, "..", NULL, dir_fd->next_offset++);
+        filler(buf, ".", NULL, dir_fd->next_offset++, 0);
+        filler(buf, "..", NULL, dir_fd->next_offset++, 0);
       }
       else if (offset_in + 1 != dir_fd->next_offset) {
         fprintf(stderr, "ERROR: discontiguous dir offsets %ld %ld.\n",
@@ -691,7 +699,7 @@ static int notmuchfs_readdir (const char            *path,
         st.st_ino = de->d_ino;
         st.st_mode = de->d_type << 12;
 
-        if (filler(buf, de->d_name, &st, telldir(dir_fd->fd)) != 0) {
+        if (filler(buf, de->d_name, &st, telldir(dir_fd->fd), 0) != 0) {
           res = 0;
           break;
         }
@@ -701,18 +709,18 @@ static int notmuchfs_readdir (const char            *path,
 
    case OPENDIR_TYPE_EMPTY_DIR:
      {
-      filler(buf, ".", NULL, 0);
-      filler(buf, "..", NULL, 0);
+      filler(buf, ".", NULL, 0, 0);
+      filler(buf, "..", NULL, 0, 0);
       break;
      }
 
    case OPENDIR_TYPE_MAIL_DIR:
      {
-      filler(buf, ".", NULL, 0);
-      filler(buf, "..", NULL, 0);
-      filler(buf, "cur", NULL, 0);
-      filler(buf, "new", NULL, 0);
-      filler(buf, "tmp", NULL, 0);
+      filler(buf, ".", NULL, 0, 0);
+      filler(buf, "..", NULL, 0, 0);
+      filler(buf, "cur", NULL, 0, 0);
+      filler(buf, "new", NULL, 0, 0);
+      filler(buf, "tmp", NULL, 0, 0);
       break;
      }
  }
@@ -971,10 +979,12 @@ static int notmuchfs_rmdir (const char* path)
 
 /*============================================================================*/
 
-static int notmuchfs_rename (const char* from, const char* to)
+static int notmuchfs_rename (const char* from, const char* to, unsigned int flags)
 {
  assert(from[0] == '/');
  assert(to[0] == '/');
+
+ UNUSED(flags);
 
  char    *last_pslash_from     = strrchr(from + 1, '#');
  char    *last_pslash_to       = strrchr(to + 1, '#');
