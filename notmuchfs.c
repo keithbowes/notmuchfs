@@ -1304,13 +1304,7 @@ static struct fuse_opt notmuchfs_opts[] = {
 };
 
 static void print_notmuchfs_usage (char *arg0) {
-  fprintf(stderr,
-          "Usage: %s mountpoint -o backing_dir=PATH -o mail_dir=PATH [options]\n"
-          "\n"
-          "General options:\n"
-          "    -o opt,[opt...]  mount options\n"
-          "    -h   --help      print help\n"
-          "    -V   --version   print version\n"
+  printf(
           "\n"
           "Notmuchfs options:\n"
           "    -o backing_dir=PATH  Path to backing directory (required)\n"
@@ -1318,6 +1312,8 @@ static void print_notmuchfs_usage (char *arg0) {
           "    -o delete_tag=TAG    Tag to apply when a mail is deleted\n"
           "    -o mutt_2476_workaround\n"
           "    -o nomutt_2476_workaround (default)\n"
+          "\n"
+          "Example: %s -o backing_dir=PATH -o mail_dir=PATH <mountpoint>\n"
           , arg0);
 }
 
@@ -1331,13 +1327,13 @@ static int notmuchfs_opt_proc (void             *data,
  (void)arg;
  switch (key) {
    case KEY_HELP:
-     print_notmuchfs_usage(outargs->argv[0]);
-     fuse_opt_add_arg(outargs, "-ho");
+     fuse_opt_add_arg(outargs, "--help");
      fuse_main(outargs->argc, outargs->argv, &notmuchfs_oper, NULL);
+     print_notmuchfs_usage(outargs->argv[0]);
      exit(1);
 
    case KEY_VERSION:
-     fprintf(stderr, "Notmuchfs version %s\n", NOTMUCHFS_VERSION);
+     printf("Notmuchfs version %s\n", NOTMUCHFS_VERSION);
      fuse_opt_add_arg(outargs, "--version");
      fuse_main(outargs->argc, outargs->argv, &notmuchfs_oper, NULL);
      exit(0);
