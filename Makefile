@@ -21,7 +21,7 @@
 
 PKG_CONFIG ?= pkg-config
 
-CFLAGS = -g -O2 -std=c99 -Wall -Wextra -Werror $(shell $(PKG_CONFIG) --cflags fuse3)
+CFLAGS = -g -O2 -std=c99 -Wall -Wextra -Werror -D_FILE_OFFSET_BITS=64 $(shell $(PKG_CONFIG) --cflags fuse3)
 
 OBJS = notmuchfs.o
 
